@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Interactive 3D Text & Hearts Rain</title>
+  <style>
+    body { margin: 0; overflow: hidden; }
+    canvas { display: block; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.146.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.146.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+  <script>
+    // Scene, Camera, Renderer
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x000000);
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 2000);
+    camera.position.set(0, 100, 400);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    // Orbit Controls
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.1;
+    controls.rotateSpeed = 0.5;
+
+    // Text phrases update
+    const textPhrases = ["Anh yêu em!!!", "1/6 vui vẻ"];
+    const sprites = [];
+    const spriteCount = 50;
+
+    // Create text sprite
+    function makeTextSprite(message, parameters = {}) {
+      const fontface = parameters.fontface || 'Arial';
+      const fontsize = parameters.fontsize || 64;
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+      context.font = `${fontsize}px ${fontface}`;
+      const textWidth = context.measureText(message).width;
+      canvas.width = textWidth;
+      canvas.height = fontsize * 1.2;
+      context.font = `${fontsize}px ${fontface}`;
+      context.fillStyle = parameters.fillStyle || 'rgba(255,182,193,1)';
+      context.textBaseline = 'top';
+      context.fillText(message, 0, 0);
+      const texture = new THREE.CanvasTexture(canvas);
+      const material = new THREE.SpriteMaterial({ map: texture, transparent: true });
+      const sprite = new THREE.Sprite(material);
+      sprite.scale.set(canvas.width * 0.5, canvas.height * 0.5, 1);
+      return sprite;
+    }
+
+    // Create heart sprite with larger canvas to avoid cut-off
+    function makeHeartSprite() {
+      const size = 100;
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      ctx.font = '80px serif';
+      ctx.fillStyle = 'rgba(255,105,180,1)';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('❤️', size/2, size/2 + 5);
+      const texture = new THREE.CanvasTexture(canvas);
+      const material = new THREE.SpriteMaterial({ map: texture, transparent: true });
+      const sprite = new THREE.Sprite(material);
+      sprite.scale.set(size * 0.5, size * 0.5, 1);
+      return sprite;
+    }
+
+    // Reset sprite position
+    function resetSprite(sprite) {
+      sprite.position.x = (Math.random() - 0.5) * 800;
+      sprite.position.y = 300 + Math.random() * 200;
+      sprite.position.z = (Math.random() - 0.5) * 800;
+      sprite.userData.speed = 50 + Math.random() * 100;
+    }
+
+    // Initialize sprites
+    for (let i = 0; i < spriteCount; i++) {
+      const sprite = Math.random() < 0.6
+        ? makeTextSprite(textPhrases[i % textPhrases.length], { fontsize: 80 })
+        : makeHeartSprite();
+      resetSprite(sprite);
+      scene.add(sprite);
+      sprites.push(sprite);
+    }
+
+    // Animation loop
+    const clock = new THREE.Clock();
+    function animate() {
+      const delta = clock.getDelta();
+      sprites.forEach(sprite => {
+        sprite.position.y -= sprite.userData.speed * delta;
+        if (sprite.position.y < -200) resetSprite(sprite);
+      });
+      controls.update();
+      renderer.render(scene, camera);
+      requestAnimationFrame(animate);
+    }
+    animate();
+
+    // Handle resize
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>
