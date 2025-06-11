@@ -1,117 +1,120 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Interactive 3D Text & Hearts Rain</title>
-  <style>
-    body { margin: 0; overflow: hidden; }
-    canvas { display: block; }
-  </style>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.146.0/build/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.146.0/examples/js/controls/OrbitControls.js"></script>
+    <meta charset="UTF-8">
+    <title>5 tháng bên nhau</title>
+    <style>
+        body {
+            background-color: #fdfdfd;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        #container {
+            background: #ffffff;
+            padding: 20px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            max-width: 80ch; /* Giới hạn độ rộng để monospace dễ canh */
+        }
+        pre {
+            font-family: monospace;
+            font-size: 16px;
+            line-height: 1.2;
+            margin: 0;
+            white-space: pre; /* giữ nguyên khoảng trắng */
+        }
+        /* Optional: hiệu ứng con trỏ nhấp nháy */
+        .cursor {
+            display: inline-block;
+            width: 8px;
+            background-color: #333;
+            animation: blink 1s steps(1) infinite;
+            vertical-align: bottom;
+        }
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+    </style>
 </head>
 <body>
-  <script>
-    // Scene, Camera, Renderer
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x000000);
-    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 2000);
-    camera.position.set(0, 100, 400);
+    <div id="container">
+        <pre id="message"></pre>
+    </div>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const pre = document.getElementById("message");
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    document.body.appendChild(renderer.domElement);
+            // Mảng các dòng đã căn sẵn khoảng trắng để tạo thành số "5".
+            // Bạn có thể tinh chỉnh độ dài và vị trí các khoảng trắng ở đầu/dưới mỗi dòng.
+            const lines = [
+                "Cảm ơn em vì đã đến bên anh. Năm tháng",
+                "vừa rồi, chúng ta đã cùng nhau trải",
+                "qua biết",
+                "bao điều.",
+                "Từ những",
+                "bỡ ngỡ ban",
+                "      đầu, những lúc",
+                "           hờn ghen, giận",
+                "             dỗi nhau, cho tới",
+                "                những giây phút",
+                "                 ấm áp, hạnh phúc",
+                "                   bên nhau. Mình",
+                "                cùng nhau tiếp tục",
+                "               cố gắng nha em bé!",
+                "             Anh yêu em bé của",
+                "         anh nhiều nhắm ạ <3",
+                "Ký tên: Anh già của em."
+            ];
 
-    // Orbit Controls
-    const controls = new THREE.OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.1;
-    controls.rotateSpeed = 0.5;
+            // Các tham số về tốc độ
+            const charDelay = 50;   // ms giữa mỗi ký tự
+            const lineDelay = 500;  // ms giữa mỗi dòng
 
-    // Text phrases update
-    const textPhrases = ["Anh yêu em <3", "Chúc em bé 1/6 vui vẻ và luôn luôn xinh đẹp, rạng rỡ !!!", "Mãi là em bé của anh !!!"];
-    const sprites = [];
-    const spriteCount = 50;
+            // Một hàm sleep dạng Promise
+            function sleep(ms) {
+                return new Promise(resolve => setTimeout(resolve, ms));
+            }
 
-    // Create text sprite
-    function makeTextSprite(message, parameters = {}) {
-      const fontface = parameters.fontface || 'Arial';
-      const fontsize = parameters.fontsize || 64;
-      const canvas = document.createElement('canvas');
-      const context = canvas.getContext('2d');
-      context.font = `${fontsize}px ${fontface}`;
-      const textWidth = context.measureText(message).width;
-      canvas.width = textWidth;
-      canvas.height = fontsize * 1.2;
-      context.font = `${fontsize}px ${fontface}`;
-      context.fillStyle = parameters.fillStyle || 'rgba(255,182,193,1)';
-      context.textBaseline = 'top';
-      context.fillText(message, 0, 0);
-      const texture = new THREE.CanvasTexture(canvas);
-      const material = new THREE.SpriteMaterial({ map: texture, transparent: true });
-      const sprite = new THREE.Sprite(material);
-      sprite.scale.set(canvas.width * 0.5, canvas.height * 0.5, 1);
-      return sprite;
-    }
+            // Hàm gõ 1 dòng
+            async function typeLine(text) {
+                // Tạo phần span chứa văn bản, để có thể thêm cursor vào
+                const lineSpan = document.createElement("span");
+                pre.appendChild(lineSpan);
+                // Tạo con trỏ nhấp nháy
+                const cursor = document.createElement("span");
+                cursor.classList.add("cursor");
+                lineSpan.appendChild(cursor);
 
-    // Create heart sprite with larger canvas to avoid cut-off
-    function makeHeartSprite() {
-      const size = 100;
-      const canvas = document.createElement('canvas');
-      canvas.width = size;
-      canvas.height = size;
-      const ctx = canvas.getContext('2d');
-      ctx.font = '80px serif';
-      ctx.fillStyle = 'rgba(255,105,180,1)';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('❤️', size/2, size/2 + 5);
-      const texture = new THREE.CanvasTexture(canvas);
-      const material = new THREE.SpriteMaterial({ map: texture, transparent: true });
-      const sprite = new THREE.Sprite(material);
-      sprite.scale.set(size * 0.5, size * 0.5, 1);
-      return sprite;
-    }
+                // Gõ từng ký tự
+                for (let i = 0; i < text.length; i++) {
+                    // Trước khi thêm ký tự mới, xóa cursor, thêm ký tự, rồi thêm lại cursor
+                    lineSpan.removeChild(cursor);
+                    const ch = document.createTextNode(text[i]);
+                    lineSpan.appendChild(ch);
+                    lineSpan.appendChild(cursor);
+                    await sleep(charDelay);
+                }
+                // Sau khi gõ xong dòng, xóa cursor, thêm newline, rồi tiếp tục
+                lineSpan.removeChild(cursor);
+                pre.appendChild(document.createTextNode("\n"));
+            }
 
-    // Reset sprite position
-    function resetSprite(sprite) {
-      sprite.position.x = (Math.random() - 0.5) * 800;
-      sprite.position.y = 300 + Math.random() * 200;
-      sprite.position.z = (Math.random() - 0.5) * 800;
-      sprite.userData.speed = 50 + Math.random() * 100;
-    }
+            // Hàm gõ toàn bộ lines
+            async function startTyping() {
+                for (let i = 0; i < lines.length; i++) {
+                    await typeLine(lines[i]);
+                    await sleep(lineDelay);
+                }
+            }
 
-    // Initialize sprites
-    for (let i = 0; i < spriteCount; i++) {
-      const sprite = Math.random() < 0.6
-        ? makeTextSprite(textPhrases[i % textPhrases.length], { fontsize: 80 })
-        : makeHeartSprite();
-      resetSprite(sprite);
-      scene.add(sprite);
-      sprites.push(sprite);
-    }
-
-    // Animation loop
-    const clock = new THREE.Clock();
-    function animate() {
-      const delta = clock.getDelta();
-      sprites.forEach(sprite => {
-        sprite.position.y -= sprite.userData.speed * delta;
-        if (sprite.position.y < -200) resetSprite(sprite);
-      });
-      controls.update();
-      renderer.render(scene, camera);
-      requestAnimationFrame(animate);
-    }
-    animate();
-
-    // Handle resize
-    window.addEventListener('resize', () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-    });
-  </script>
+            // Bắt đầu gõ
+            startTyping();
+        });
+    </script>
 </body>
 </html>
